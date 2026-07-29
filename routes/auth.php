@@ -2,12 +2,9 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
-use App\Http\Controllers\Auth\EmailVerificationNotificationController;
-use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 // NB : l'inscription publique est volontairement désactivée.
@@ -32,18 +29,12 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
+// NB : pas de vérification d'e-mail. Les comptes sont créés par un gestionnaire
+// qui saisit lui-même l'adresse ; le schéma `utilisateurs` n'a donc pas de
+// colonne `email_verified_at` et le modèle n'implémente pas MustVerifyEmail.
+// Les routes Breeze correspondantes ont été retirées : elles levaient une erreur
+// (appel de hasVerifiedEmail() sur un modèle qui ne l'implémente pas).
 Route::middleware('auth')->group(function () {
-    Route::get('verify-email', EmailVerificationPromptController::class)
-        ->name('verification.notice');
-
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
-
-    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('verification.send');
-
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');
 

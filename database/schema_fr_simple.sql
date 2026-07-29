@@ -85,6 +85,7 @@ CREATE TABLE inscriptions (
     utilisateur_id      INT UNSIGNED NOT NULL,
     formation_id        INT UNSIGNED NOT NULL,
     statut              ENUM('non_commencee', 'en_cours', 'terminee') NOT NULL DEFAULT 'non_commencee',
+    objectif_quotidien  TINYINT UNSIGNED NOT NULL DEFAULT 3,  -- leçons/jour fixé par le superviseur
     inscrit_le          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     termine_le          TIMESTAMP NULL,
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
@@ -118,6 +119,19 @@ CREATE TABLE certificats (
     delivre_le          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
     FOREIGN KEY (formation_id) REFERENCES formations(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Journal des connexions (1 ligne par utilisateur et par jour)
+-- Alimente la section « Activité durant la semaine ».
+-- ---------------------------------------------------------------------
+CREATE TABLE journal_connexions (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id      INT UNSIGNED NOT NULL,
+    jour                DATE NOT NULL,
+    cree_le             TIMESTAMP NULL,
+    UNIQUE KEY uq_utilisateur_jour (utilisateur_id, jour),
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS = 1;

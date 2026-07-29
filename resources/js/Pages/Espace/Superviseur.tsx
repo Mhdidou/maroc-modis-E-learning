@@ -1,3 +1,4 @@
+import ApercuBanner from '@/Components/ApercuBanner';
 import { BRAND } from '@/brand';
 import StatCard from '@/Components/StatCard';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -21,15 +22,18 @@ export default function Superviseur({
     stats,
     repartitionStatuts,
     apprenants,
+    apercu,
 }: {
     stats: {
         apprenants: number;
         formateurs: number;
         formations: number;
         certificats: number;
+        certificats_expires: number;
     };
     repartitionStatuts: Record<string, number>;
     apprenants: Apprenant[];
+    apercu?: string;
 }) {
     const user = usePage().props.auth.user;
 
@@ -45,17 +49,28 @@ export default function Superviseur({
                             Pilotez la montée en compétence de vos équipes.
                         </p>
                     </div>
-                    <Link
-                        href={route('utilisateurs.create')}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#E23744] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#E23744]/25 transition active:scale-95 hover:brightness-110"
-                    >
-                        <UserPlus className="h-4 w-4" />
-                        Ajouter un compte
-                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            href={route('affectations.create')}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#1C9AD6] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#1C9AD6]/25 transition active:scale-95 hover:brightness-110"
+                        >
+                            <GraduationCap className="h-4 w-4" />
+                            Affecter une formation
+                        </Link>
+                        <Link
+                            href={route('utilisateurs.create')}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#E23744] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#E23744]/25 transition active:scale-95 hover:brightness-110"
+                        >
+                            <UserPlus className="h-4 w-4" />
+                            Ajouter un compte
+                        </Link>
+                    </div>
                 </div>
             }
         >
             <Head title="Espace Superviseur" />
+
+            {apercu && <ApercuBanner role="superviseur" />}
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
@@ -78,7 +93,11 @@ export default function Superviseur({
                 />
                 <StatCard
                     icon={Award}
-                    label="Certificats délivrés"
+                    label={
+                        stats.certificats_expires > 0
+                            ? `Certificats valides · ${stats.certificats_expires} expiré${stats.certificats_expires > 1 ? 's' : ''}`
+                            : 'Certificats valides'
+                    }
                     value={stats.certificats}
                     accent="#16a34a"
                 />

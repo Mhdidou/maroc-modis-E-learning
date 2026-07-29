@@ -41,7 +41,21 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+
+            // URL RELATIVE volontairement, et non basée sur APP_URL.
+            //
+            // Avec `APP_URL.'/storage'`, une vidéo importée recevait une adresse
+            // absolue (http://localhost/storage/...) alors que l'application
+            // peut être servie ailleurs — `php artisan serve` écoute sur
+            // 127.0.0.1:8000. Le navigateur allait donc chercher le média sur un
+            // autre serveur (Apache, port 80), qui répondait 404 : la vidéo ne
+            // s'affichait pas alors que le fichier était bien stocké.
+            //
+            // Une URL relative est résolue par le navigateur sur l'hôte qui a
+            // servi la page : elle fonctionne en `artisan serve`, derrière
+            // Apache, et en production, sans dépendre d'APP_URL.
+            'url' => '/storage',
+
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

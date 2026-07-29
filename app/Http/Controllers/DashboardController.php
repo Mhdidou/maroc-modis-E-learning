@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\SuiviApprenant;
 use App\Models\Certificat;
 use App\Models\Formation;
 use App\Models\Inscription;
@@ -17,6 +18,8 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
+    use SuiviApprenant;
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -46,7 +49,10 @@ class DashboardController extends Controller
                 'formateurs' => User::where('role', User::ROLE_FORMATEUR)->count(),
                 'apprenants' => User::where('role', User::ROLE_APPRENANT)->count(),
                 'formations' => Formation::count(),
-                'certificats' => Certificat::count(),
+                // Un certificat expiré n'est plus une certification acquise :
+                // les deux compteurs sont distincts, jamais confondus.
+                'certificats' => Certificat::valides()->count(),
+                'certificats_expires' => Certificat::expires()->count(),
             ],
             'repartitionStatuts' => Inscription::select('statut', DB::raw('COUNT(*) as total'))
                 ->groupBy('statut')
@@ -63,22 +69,22 @@ class DashboardController extends Controller
 
     private function apprenant(User $user): Response
     {
-        $inscriptions = Inscription::with('formation')
-            ->where('utilisateur_id', $user->id)
-            ->get();
+        $suivi = $this->suiviFormations($user);
+        $formations = collect($suivi['formations']);
 
         return Inertia::render('Espace/Apprenant', [
             'stats' => [
-                'inscriptions' => $inscriptions->count(),
-                'en_cours' => $inscriptions->where('statut', 'en_cours')->count(),
-                'terminees' => $inscriptions->where('statut', 'terminee')->count(),
-                'certificats' => Certificat::where('utilisateur_id', $user->id)->count(),
+                'inscriptions' => $formations->count(),
+                'en_cours' => $formations->where('statut', 'en_cours')->count(),
+                'terminees' => $formations->where('statut', 'terminee')->count(),
+                'certificats' => Certificat::valides()
+                    ->where('utilisateur_id', $user->id)
+                    ->count(),
             ],
-            'formations' => $inscriptions->map(fn ($i) => [
-                'id' => $i->formation_id,
-                'titre' => $i->formation->titre ?? 'Formation',
-                'statut' => $i->statut,
-            ])->values(),
+            'formations' => $suivi['formations'],
+            'objectifDuJour' => $suivi['objectifDuJour'],
+            'activiteSemaine' => $this->activiteSemaine($user),
+            'certificats' => $this->certificatsApprenant($user),
         ]);
     }
 
@@ -117,7 +123,8 @@ class DashboardController extends Controller
                 'apprenants' => $apprenants->count(),
                 'formateurs' => User::where('role', User::ROLE_FORMATEUR)->count(),
                 'formations' => Formation::count(),
-                'certificats' => Certificat::count(),
+                'certificats' => Certificat::valides()->count(),
+                'certificats_expires' => Certificat::expires()->count(),
             ],
             'repartitionStatuts' => Inscription::select('statut', DB::raw('COUNT(*) as total'))
                 ->groupBy('statut')

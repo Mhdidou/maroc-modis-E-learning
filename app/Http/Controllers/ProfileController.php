@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,7 +17,6 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
         ]);
     }
@@ -29,35 +26,28 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
+        // Le front-end envoie `name` (contrat Breeze conservé) alors que la
+        // colonne s'appelle `nom_complet` : `name` n'étant pas fillable, un
+        // fill() direct l'abandonnait silencieusement et le nom n'était jamais
+        // enregistré. Le schéma n'a par ailleurs pas de `email_verified_at` —
+        // le reset de vérification hérité de Breeze est retiré.
+        $request->user()->fill([
+            'nom_complet' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
 
         $request->user()->save();
 
         return Redirect::route('profile.edit');
     }
 
-    /**
-     * Delete the user's account.
+    /*
+     * Pas de suppression de compte par l'utilisateur lui-même : les inscriptions
+     * et les certificats sont des pièces d'audit et un employé ne peut pas
+     * effacer son propre historique de formation. L'offboarding passe par la
+     * désactivation, réservée à l'admin et aux superviseurs
+     * (UtilisateurController::destroy).
      */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
-
-        $user = $request->user();
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
-    }
 }

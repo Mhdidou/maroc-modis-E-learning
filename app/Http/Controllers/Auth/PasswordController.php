@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class PasswordController extends Controller
@@ -20,8 +19,10 @@ class PasswordController extends Controller
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
+        // Colonne `mot_de_passe`, hachée par le cast `hashed` du modèle : écrire
+        // `password` provoquait une erreur SQL (colonne inexistante).
         $request->user()->update([
-            'password' => Hash::make($validated['password']),
+            'mot_de_passe' => $validated['password'],
         ]);
 
         return back();

@@ -28,7 +28,8 @@ class PasswordUpdateTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        // Colonne `mot_de_passe` : le schéma métier est en français.
+        $this->assertTrue(Hash::check('new-password', $user->refresh()->mot_de_passe));
     }
 
     public function test_correct_password_must_be_provided_to_update_password(): void

@@ -19,4 +19,9 @@ export type PageProps<
     flash: {
         status?: string | null;
     };
+    /** Limites serveur partagées (lues dans php.ini). */
+    limites?: {
+        /** Taille d'import maximale réellement acceptée par PHP, en octets. */
+        upload_octets: number;
+    };
 };

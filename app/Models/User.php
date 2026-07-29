@@ -3,21 +3,26 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /**
      * Les rôles reconnus par la plateforme (miroir de l'ENUM SQL `utilisateurs.role`).
      */
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_SUPERVISEUR = 'superviseur';
+
     public const ROLE_FORMATEUR = 'formateur';
+
     public const ROLE_APPRENANT = 'apprenant';
 
     /**
@@ -29,7 +34,15 @@ class User extends Authenticatable
      * Colonnes d'horodatage personnalisées du schéma.
      */
     const CREATED_AT = 'cree_le';
+
     const UPDATED_AT = 'mis_a_jour_le';
+
+    /**
+     * Colonne de désactivation (soft delete). Un compte désactivé est exclu de
+     * toutes les requêtes par le global scope de SoftDeletes — donc aussi de
+     * l'authentification, l'EloquentUserProvider passant par `newQuery()`.
+     */
+    const DELETED_AT = 'supprime_le';
 
     /**
      * Attributs assignables en masse.
@@ -133,8 +146,46 @@ class User extends Authenticatable
         return $this->hasMany(Inscription::class, 'utilisateur_id');
     }
 
+    /**
+     * Les certificats délivrés à cet utilisateur (historique complet, y compris
+     * les certificats expirés : la recertification ajoute une ligne).
+     */
+    public function certificats()
+    {
+        return $this->hasMany(Certificat::class, 'utilisateur_id');
+    }
+
+    /**
+     * Le journal des connexions de cet utilisateur (1 ligne / jour).
+     */
+    public function connexions()
+    {
+        return $this->hasMany(JournalConnexion::class, 'utilisateur_id');
+    }
+
     /* ------------------------------------------------------------------ */
-    /*  Helpers de rôle                                                    */
+    /*  Activation du compte */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Le compte est-il actif ? N'a de sens que sur un modèle chargé via
+     * `withTrashed()` — sans cela, seuls les comptes actifs sont visibles.
+     */
+    public function estActif(): bool
+    {
+        return $this->supprime_le === null;
+    }
+
+    /**
+     * Comptes désactivés uniquement. À combiner avec `withTrashed()`.
+     */
+    public function scopeDesactives(Builder $query): Builder
+    {
+        return $query->whereNotNull($this->getDeletedAtColumn());
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Helpers de rôle */
     /* ------------------------------------------------------------------ */
 
     public function isAdmin(): bool

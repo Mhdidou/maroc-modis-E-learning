@@ -38,6 +38,7 @@ export default function Admin({
         apprenants: number;
         formations: number;
         certificats: number;
+        certificats_expires: number;
     };
     repartitionStatuts: Record<string, number>;
     superviseurs: Superviseur[];
@@ -126,7 +127,11 @@ export default function Admin({
                 />
                 <StatCard
                     icon={Award}
-                    label="Certificats"
+                    label={
+                        stats.certificats_expires > 0
+                            ? `Certificats valides · ${stats.certificats_expires} expiré${stats.certificats_expires > 1 ? 's' : ''}`
+                            : 'Certificats valides'
+                    }
                     value={stats.certificats}
                     accent="#16a34a"
                 />

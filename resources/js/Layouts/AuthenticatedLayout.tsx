@@ -1,7 +1,18 @@
 import { LOGO_SRC, ROLE_META } from '@/brand';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutDashboard, LogOut, Menu, User as UserIcon, Users, X } from 'lucide-react';
+import {
+    BookOpen,
+    ChevronDown,
+    Eye,
+    GraduationCap,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    User as UserIcon,
+    Users,
+    X,
+} from 'lucide-react';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
 /**
@@ -15,7 +26,9 @@ export default function Authenticated({
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const meta = ROLE_META[user.role];
-    const peutGererComptes = user.role === 'admin' || user.role === 'superviseur';
+    const isAdmin = user.role === 'admin';
+    const isApprenant = user.role === 'apprenant';
+    const peutGererComptes = isAdmin || user.role === 'superviseur';
 
     const [open, setOpen] = useState(false);
 
@@ -68,14 +81,60 @@ export default function Authenticated({
                                 >
                                     {meta.espace}
                                 </NavItem>
-                                {peutGererComptes && (
+                                {isApprenant && (
                                     <NavItem
-                                        href={route('utilisateurs.index')}
-                                        active={route().current('utilisateurs.*')}
-                                        icon={Users}
+                                        href={route('mes-formations.index')}
+                                        active={route().current('mes-formations.*')}
+                                        icon={BookOpen}
                                     >
-                                        Comptes
+                                        Mes formations
                                     </NavItem>
+                                )}
+                                {peutGererComptes && (
+                                    <>
+                                        <NavItem
+                                            href={route('utilisateurs.index')}
+                                            active={route().current('utilisateurs.*')}
+                                            icon={Users}
+                                        >
+                                            Comptes
+                                        </NavItem>
+                                        <NavItem
+                                            href={route('affectations.create')}
+                                            active={route().current('affectations.*')}
+                                            icon={GraduationCap}
+                                        >
+                                            Affecter
+                                        </NavItem>
+                                    </>
+                                )}
+                                {isAdmin && (
+                                    <Dropdown>
+                                        <Dropdown.Trigger>
+                                            <button
+                                                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                                                    route().current('apercu.*')
+                                                        ? 'bg-[#1B2430] text-white'
+                                                        : 'text-slate-600 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                                Aperçu
+                                                <ChevronDown className="h-3.5 w-3.5" />
+                                            </button>
+                                        </Dropdown.Trigger>
+                                        <Dropdown.Content>
+                                            <Dropdown.Link href={route('apercu.apprenant')}>
+                                                Vue Apprenant
+                                            </Dropdown.Link>
+                                            <Dropdown.Link href={route('apercu.formateur')}>
+                                                Vue Formateur
+                                            </Dropdown.Link>
+                                            <Dropdown.Link href={route('apercu.superviseur')}>
+                                                Vue Superviseur
+                                            </Dropdown.Link>
+                                        </Dropdown.Content>
+                                    </Dropdown>
                                 )}
                             </div>
                         </div>
@@ -135,13 +194,54 @@ export default function Authenticated({
                         >
                             {meta.espace}
                         </Link>
-                        {peutGererComptes && (
+                        {isApprenant && (
                             <Link
-                                href={route('utilisateurs.index')}
+                                href={route('mes-formations.index')}
                                 className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                             >
-                                Comptes
+                                Mes formations
                             </Link>
+                        )}
+                        {peutGererComptes && (
+                            <>
+                                <Link
+                                    href={route('utilisateurs.index')}
+                                    className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                >
+                                    Comptes
+                                </Link>
+                                <Link
+                                    href={route('affectations.create')}
+                                    className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                >
+                                    Affecter une formation
+                                </Link>
+                            </>
+                        )}
+                        {isAdmin && (
+                            <div className="mt-1 border-t border-slate-100 pt-1">
+                                <div className="px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-400">
+                                    Aperçu des espaces
+                                </div>
+                                <Link
+                                    href={route('apercu.apprenant')}
+                                    className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                >
+                                    Vue Apprenant
+                                </Link>
+                                <Link
+                                    href={route('apercu.formateur')}
+                                    className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                >
+                                    Vue Formateur
+                                </Link>
+                                <Link
+                                    href={route('apercu.superviseur')}
+                                    className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                >
+                                    Vue Superviseur
+                                </Link>
+                            </div>
                         )}
                         <div className="mt-2 border-t border-slate-200 pt-2">
                             <div className="px-3 py-1 text-sm font-bold">

@@ -24,7 +24,11 @@ class UtilisateurController extends Controller
      */
     public function index(Request $request): Response
     {
-        $utilisateurs = User::with('superviseur')
+        // `withTrashed()` : les comptes désactivés restent visibles ici, sinon un
+        // gestionnaire n'aurait aucun moyen de réactiver un employé de retour et
+        // recréerait un doublon, scindant son historique de formation.
+        $utilisateurs = User::withTrashed()
+            ->with('superviseur')
             ->whereIn('role', $request->user()->rolesGerables())
             ->orderBy('role')
             ->orderBy('nom_complet')
@@ -37,6 +41,8 @@ class UtilisateurController extends Controller
                 'domaine' => $u->domaine,
                 'superviseur' => $u->superviseur?->nom_complet,
                 'cree_le' => optional($u->cree_le)->format('d/m/Y'),
+                'actif' => $u->estActif(),
+                'desactive_le' => optional($u->supprime_le)->format('d/m/Y'),
             ]);
 
         return Inertia::render('Utilisateurs/Index', [
@@ -89,5 +95,56 @@ class UtilisateurController extends Controller
 
         return redirect()->route('utilisateurs.index')
             ->with('status', 'Le compte a été créé avec succès.');
+    }
+
+    /**
+     * Désactive un compte (départ d'un employé du plateau).
+     *
+     * Soft delete volontaire : l'employé perd immédiatement l'accès (le global
+     * scope l'exclut de l'authentification) mais ses inscriptions, sa
+     * progression et ses certificats restent intacts et consultables en audit.
+     * Il n'existe aucune suppression physique d'un compte dans l'application.
+     */
+    public function destroy(Request $request, User $utilisateur): RedirectResponse
+    {
+        $this->autoriseGestionDe($request, $utilisateur);
+
+        // Se désactiver soi-même verrouillerait le compte du gestionnaire.
+        abort_if($utilisateur->is($request->user()), 403, 'Vous ne pouvez pas désactiver votre propre compte.');
+
+        $utilisateur->delete();
+
+        return redirect()->route('utilisateurs.index')
+            ->with('status', "Le compte de {$utilisateur->nom_complet} a été désactivé. "
+                .'Son historique de formation est conservé.');
+    }
+
+    /**
+     * Réactive un compte désactivé : l'employé retrouve son accès et son
+     * historique de formation d'origine.
+     */
+    public function restore(Request $request, int $utilisateur): RedirectResponse
+    {
+        $cible = User::withTrashed()->findOrFail($utilisateur);
+
+        $this->autoriseGestionDe($request, $cible);
+
+        $cible->restore();
+
+        return redirect()->route('utilisateurs.index')
+            ->with('status', "Le compte de {$cible->nom_complet} a été réactivé.");
+    }
+
+    /**
+     * Un gestionnaire ne peut agir que sur les rôles qu'il a le droit de gérer
+     * (un superviseur ne touche ni aux admins ni aux autres superviseurs).
+     */
+    private function autoriseGestionDe(Request $request, User $cible): void
+    {
+        abort_unless(
+            in_array($cible->role, $request->user()->rolesGerables(), true),
+            403,
+            "Vous n'avez pas le droit de gérer ce compte."
+        );
     }
 }

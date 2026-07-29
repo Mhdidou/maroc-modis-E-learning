@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\JournalConnexion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,6 +33,13 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        // Journalise le jour de connexion (1 ligne / utilisateur / jour) pour
+        // alimenter la section « Activité durant la semaine ».
+        JournalConnexion::firstOrCreate([
+            'utilisateur_id' => $request->user()->id,
+            'jour' => today()->toDateString(),
+        ]);
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
